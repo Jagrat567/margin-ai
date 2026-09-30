@@ -8,20 +8,15 @@
     "build": "tsc --noEmit && vite build",
     "start": "tsx server/index.ts",
     "test": "tsx --test tests/*.test.ts",
-    "check:services": "tsx scripts/check-services.ts",
-    "warmup": "tsx scripts/warmup.ts"
+    "check:services": "tsx scripts/check-services.ts"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.3.0",
-    "@supabase/supabase-js": "^2.57.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
     "lucide-react": "^0.468.0",
-    "multer": "^2.0.2",
-    "pdfjs-dist": "^6.3.289",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",
@@ -30,15 +25,16 @@
   "devDependencies": {
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.3",
-    "@types/multer": "^2.0.0",
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
-    "pdf-lib": "^1.17.1",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.5"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

@@ -22,20 +22,3 @@ export async function* readSSE(body: ReadableStream<Uint8Array>): AsyncGenerator
   } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }
 
-const metadataMarker = '<margin-meta>';
-// Hide the small final classification trailer, even when its delimiter is split
-// across chunks. The answer itself is ordinary text, so providers don't buffer JSON.
-export function visibleAnswer(raw: string): string {
-  const marker = raw.indexOf(metadataMarker);
-  let text = marker >= 0 ? raw.slice(0, marker) : raw;
-  if (marker < 0) {
-    for (let length = metadataMarker.length - 1; length > 0; length--) {
-      if (text.endsWith(metadataMarker.slice(0, length))) { text = text.slice(0, -length); break; }
-    }
-  }
-  return /[\uD800-\uDBFF]$/.test(text) ? text.slice(0, -1) : text;
-}
-export function answerClassification(raw: string): 'general' | 'pdf' | 'mixed' {
-  const match = /<margin-meta>\s*(general|pdf|mixed)\s*<\/margin-meta>/.exec(raw);
-  return (match?.[1] as 'general' | 'pdf' | 'mixed') || 'mixed';
-}
