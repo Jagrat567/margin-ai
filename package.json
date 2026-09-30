@@ -11,6 +11,7 @@
     "check:services": "tsx scripts/check-services.ts"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
