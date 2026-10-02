@@ -89,13 +89,13 @@ button svg { flex-shrink: 0; }
 .creator-name { color: var(--text); font-weight: 700; }
 .composer-area { width: 100%; max-width: 830px; margin: 0 auto; padding: 13px 26px 16px; }
 .empty-chat .composer-area { max-width: 800px; padding-top: 0; padding-bottom: 0; }
-.composer { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 19px 18px 13px; box-shadow: 0 4px 18px #00000003; }
+.composer { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 12px 18px 10px; box-shadow: 0 4px 18px #00000003; }
 .composer:focus-within { border-color: var(--border-strong); }
-.composer textarea { display: block; width: 100%; resize: none; border: 0; outline: none; background: transparent; color: var(--text); font-size: 16px; line-height: 1.7; padding: 0 3px; min-height: 69px; max-height: 180px; }
+.composer textarea { display: block; width: 100%; resize: none; border: 0; outline: none; background: transparent; color: var(--text); font-size: 16px; line-height: 1.7; padding: 0 3px; min-height: 42px; max-height: 180px; }
 .composer textarea:focus-visible { outline: none; }
 .composer textarea::placeholder { color: var(--soft); }
 .composer textarea:disabled { opacity: .7; }
-.composer-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; }
+.composer-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px; }
 .composer-context { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .attach-button { display: grid; place-content: center; height: 32px; width: 32px; border-radius: 9px; color: var(--muted); background: transparent; }
 .attach-button:hover { background: var(--hover); color: var(--text); }
@@ -203,8 +203,8 @@ button svg { flex-shrink: 0; }
   .welcome h1 { font-size: 62px; letter-spacing: -4px; margin-bottom: 16px; }
   .welcome-copy { font-size: 13px; }
   .composer-area,.empty-chat .composer-area { padding-inline: 16px; }
-  .composer { border-radius: 21px; padding: 17px 14px 12px; }
-  .composer textarea { font-size: 16px; min-height: 77px; }
+  .composer { border-radius: 21px; padding: 12px 14px 10px; }
+  .composer textarea { font-size: 16px; min-height: 42px; }
   .context-label,.strict-toggle { font-size: 11px; }
   .composer-context { gap: 6px; }
   .composer-toolbar { gap: 5px; }
@@ -225,5 +225,5 @@ button svg { flex-shrink: 0; }
   .connection { gap: 9px; }
   .connection small { font-size: 10px; }
 }
-@media(max-height:620px) { .empty-chat .welcome { padding-top: 10px; padding-bottom: 15px; } .welcome h1 { font-size: 48px; margin-bottom: 10px; } .starter-area { padding-block: 15px; } .welcome-footnote { display: none; } .empty-chat .composer textarea { min-height: 54px; } }
+@media(max-height:620px) { .empty-chat .welcome { padding-top: 10px; padding-bottom: 15px; } .welcome h1 { font-size: 48px; margin-bottom: 10px; } .starter-area { padding-block: 15px; } .welcome-footnote { display: none; } .empty-chat .composer textarea { min-height: 42px; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation: none!important; transition: none!important; scroll-behavior: auto!important; } }

@@ -2,7 +2,7 @@
 
 Big questions. Clear answers. Built by Jagrat.
 
-A computer science study chatbot with streamed Markdown answers, code examples, follow-up questions, a Stop button, and light/dark themes. React + TypeScript + Express + Groq. No accounts, PDF uploads, local AI models, Pinecone, or Supabase are required. Conversation history stays in browser memory and resets on refresh; relevant messages are sent to Groq for answers.
+A general-purpose AI chatbot for writing, planning, learning, everyday questions, and programming with streamed Markdown answers, code examples, follow-up questions, a Stop button, and light/dark themes. React + TypeScript + Express + Groq. No accounts, PDF uploads, local AI models, Pinecone, or Supabase are required. Conversation history stays in browser memory and resets on refresh; relevant messages are sent to Groq for answers.
 
 ## Local setup
 
@@ -20,7 +20,7 @@ Create a free Node web service from this repository (render.yaml also provides a
 
 Set GROQ_API_KEY, GROQ_MODEL, SESSION_SECRET (at least 32 characters), APP_ORIGIN (exact public Vercel origin, no trailing slash), NODE_ENV=production, HOST=0.0.0.0, and TRUST_PROXY_HOPS=1. Render supplies PORT. Only trust the immediate platform proxy; do not set trust proxy to true.
 
-The free backend can sleep when idle. The frontend shows a wake-up message while checking its status. No embedding download is needed.
+The free backend can sleep when idle. Opening Margin automatically checks readiness, retrying transient failures up to 12 times with 10-second request timeouts and 2-second pauses. Sending a question checks readiness again, then submits it once. Stop cancels the wait and restores your draft. No background keep-alive schedule is used. No embedding download is needed.
 
 ## Vercel frontend
 
