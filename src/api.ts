@@ -7,7 +7,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
   return data as T;
 }
-export async function streamChat(payload: unknown, signal: AbortSignal, onDelta: (text: string) => void): Promise<ChatResult> {
+export async function streamChat(payload: unknown, signal: AbortSignal, onDelta: (text: string) => void, onStatus?: (message: string) => void): Promise<ChatResult> {
   const response = await fetch('/api/chat', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(payload), signal });
   if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error || 'Unable to start the answer. Please try again.'); }
   if (!response.body) throw new Error('Streaming is unavailable. Please try again.');
@@ -22,12 +22,13 @@ export async function streamChat(payload: unknown, signal: AbortSignal, onDelta:
         onDelta(characters.slice(i, i + 3).join(''));
         await new Promise<void>((resolve, reject) => {
           const stop = () => { clearTimeout(timer); reject(signal.reason); };
-          const timer = setTimeout(() => { signal.removeEventListener('abort', stop); resolve(); }, 45);
+          const timer = setTimeout(() => { signal.removeEventListener('abort', stop); resolve(); }, 30);
           signal.addEventListener('abort', stop, { once: true });
           if (signal.aborted) stop();
         });
       }
     }
+    else if (event.type === 'status') onStatus?.(event.message);
     else if (event.type === 'error') throw new Error(event.message);
     else if (event.type === 'done') return event.result;
   }

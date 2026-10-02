@@ -38,7 +38,7 @@ export function createApp(services: Services, options: { ready?: typeof readines
   const chatLimit = rateLimit({ windowMs: 60000, limit: 12, message: { error: 'Take a moment, then ask your next question.' }, skip: () => options.rateLimits === false });
   app.post('/api/chat', chatLimit, async (req, res) => {
     if (!ready().chatReady) throw new AppError(503, 'Add your Groq API key to enable AI answers.');
-    const { message, history } = validateChat(req.body);
+    const { message, history, webSearch } = validateChat(req.body);
     if (activeSessions.has(res.locals.session)) throw new AppError(409, 'Wait for the current operation to finish.');
     activeSessions.add(res.locals.session);
     const controller = new AbortController();
@@ -47,18 +47,18 @@ export function createApp(services: Services, options: { ready?: typeof readines
     res.on('close', disconnected);
     try {
       if (controller.signal.aborted) return;
-      if (!streaming) { res.json(await services.answer(message, history, controller.signal)); return; }
+      if (!streaming) { res.json(await services.answer(message, history, controller.signal, webSearch)); return; }
       res.status(200).set({ 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' });
       res.flushHeaders();
       const heartbeat = setInterval(() => { if (!res.destroyed) res.write(': heartbeat\n\n'); }, 15000);
       try {
         if (services.streamAnswer) {
-          for await (const event of services.streamAnswer(message, history, controller.signal)) {
+          for await (const event of services.streamAnswer(message, history, controller.signal, webSearch)) {
             if (controller.signal.aborted || res.destroyed) break;
             res.write(`data: ${JSON.stringify(event)}\n\n`);
           }
         } else {
-          const result = await services.answer(message, history, controller.signal);
+          const result = await services.answer(message, history, controller.signal, webSearch);
           if (!res.destroyed) res.write(`data: ${JSON.stringify({ type: 'done', result })}\n\n`);
         }
       } catch (e) {

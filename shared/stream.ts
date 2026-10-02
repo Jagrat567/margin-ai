@@ -1,5 +1,5 @@
 import type { ChatResult } from './types.js';
-export type ChatEvent = { type: 'delta'; text: string } | { type: 'done'; result: ChatResult } | { type: 'error'; message: string };
+export type ChatEvent = { type: 'status'; message: string } | { type: 'delta'; text: string } | { type: 'done'; result: ChatResult } | { type: 'error'; message: string };
 
 // Both the provider and our API use SSE. Network reads can split anywhere,
 // including inside UTF-8 characters, JSON strings, and CRLF boundaries.

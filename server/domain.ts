@@ -3,10 +3,10 @@ import type { ChatEvent } from '../shared/stream.js';
 export class AppError extends Error { constructor(public status: number, message: string) { super(message); } }
 export interface HistoryMessage { role: 'user' | 'assistant'; content: string }
 export interface Services {
-  answer(question: string, history: HistoryMessage[], signal?: AbortSignal): Promise<ChatResult>;
-  streamAnswer?(question: string, history: HistoryMessage[], signal?: AbortSignal): AsyncGenerator<ChatEvent>;
+  answer(question: string, history: HistoryMessage[], signal?: AbortSignal, webSearch?: boolean): Promise<ChatResult>;
+  streamAnswer?(question: string, history: HistoryMessage[], signal?: AbortSignal, webSearch?: boolean): AsyncGenerator<ChatEvent>;
 }
-export function validateChat(body: unknown): { message: string; history: HistoryMessage[] } {
+export function validateChat(body: unknown): { message: string; history: HistoryMessage[]; webSearch: boolean } {
   if (!body || typeof body !== 'object') throw new AppError(400, 'Please enter a question.');
   const value = body as Record<string, unknown>;
   if (typeof value.message !== 'string' || !value.message.trim() || value.message.length > 4000) throw new AppError(400, 'Questions must contain between 1 and 4,000 characters.');
@@ -17,5 +17,6 @@ export function validateChat(body: unknown): { message: string; history: History
     const m = item as Record<string, unknown>;
     if (!['user', 'assistant'].includes(String(m.role)) || typeof m.content !== 'string' || m.content.length > 6000) throw new AppError(400, 'Invalid conversation history.');
   }
-  return { message: value.message.trim(), history: history as HistoryMessage[] };
+  if (value.webSearch !== undefined && typeof value.webSearch !== 'boolean') throw new AppError(400, 'Invalid web search setting.');
+  return { webSearch: value.webSearch === true, message: value.message.trim(), history: history as HistoryMessage[] };
 }

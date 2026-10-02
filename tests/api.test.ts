@@ -9,12 +9,12 @@ import type { Services } from '../server/domain.js';
 
 function fakeServices(): Services { return { answer: async () => ({ content: 'A stack is last in first out.' }) }; }
 test('chat works without storage, validates input, and rejects removed upload routes', async t => {
-  const server = createApp(fakeServices(), { ready: () => ({ chatReady: true, missing: [] }), rateLimits: false }).listen(0, '127.0.0.1');
+  const server = createApp(fakeServices(), { ready: () => ({ searchReady: false, chatReady: true, missing: [] }), rateLimits: false }).listen(0, '127.0.0.1');
   await new Promise<void>(resolve => server.once('listening', resolve));
   t.after(() => { server.closeAllConnections(); server.close(); });
   const base = 'http://127.0.0.1:' + (server.address() as AddressInfo).port + '/api';
   const status = await fetch(base + '/status');
-  assert.deepEqual(await status.json(), { chatReady: true, missing: [] });
+  assert.deepEqual(await status.json(), { searchReady: false, chatReady: true, missing: [] });
   assert.match(status.headers.get('set-cookie')!, /HttpOnly/);
   const chat = (body: object, origin?: string) => fetch(base + '/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(origin ? { origin } : {}) }, body: JSON.stringify(body) });
   assert.match((await (await chat({ message: 'What is a stack?' })).json()).content, /last in first out/);
@@ -24,7 +24,7 @@ test('chat works without storage, validates input, and rejects removed upload ro
   assert.equal((await fetch(base + '/documents', { method: 'POST' })).status, 404);
 });
 test('missing credentials produce honest status and actionable errors', async t => {
-  const app = createApp(fakeServices(), { ready: () => ({ chatReady: false, missing: ['GROQ_API_KEY'] }), rateLimits: false });
+  const app = createApp(fakeServices(), { ready: () => ({ searchReady: false, chatReady: false, missing: ['GROQ_API_KEY'] }), rateLimits: false });
   const server = app.listen(0, '127.0.0.1'); await new Promise<void>(resolve => server.once('listening', resolve));
   t.after(() => { server.closeAllConnections(); server.close(); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;
@@ -46,7 +46,7 @@ test('stream delivers deltas before completion, reports failures, and cancels up
     yield { type: 'delta', text: ' and second part.' };
     yield { type: 'done', result: { content: 'First part and second part.' } };
   };
-  const server = createApp(services, { ready: () => ({ chatReady: true, missing: [] }), rateLimits: false }).listen(0, '127.0.0.1');
+  const server = createApp(services, { ready: () => ({ searchReady: false, chatReady: true, missing: [] }), rateLimits: false }).listen(0, '127.0.0.1');
   await new Promise<void>(resolve => server.once('listening', resolve));
   t.after(() => { server.closeAllConnections(); server.close(); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;

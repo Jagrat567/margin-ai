@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowUp, BookOpen, Check, ChevronRight, CircleHelp, Code2, Lightbulb, PenLine, Compass, Menu, MessageSquare, Moon, PanelLeftClose, Plus, Settings2, Sparkles, Square, Sun, X } from 'lucide-react';
+import { Globe, ArrowUp, BookOpen, Check, ChevronRight, CircleHelp, Code2, Lightbulb, PenLine, Compass, Menu, MessageSquare, Moon, PanelLeftClose, Plus, Settings2, Sparkles, Square, Sun, X } from 'lucide-react';
 import type { AppStatus, ChatMessage } from '../shared/types';
 import { streamChat } from './api';
 import { waitForBackend } from './connection';
@@ -23,6 +23,8 @@ export default function App() {
   const [connecting, setConnecting] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
+  const [webSearch, setWebSearch] = useState(false);
+  const [searchPhase, setSearchPhase] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [setup, setSetup] = useState(false);
@@ -65,11 +67,12 @@ export default function App() {
       const ready = await waitForBackend(controller.signal);
       setStatus(ready); setConnecting(false);
       if (!ready.chatReady) throw new Error('Margin’s AI connection is not configured yet. Please try again later.');
+      if (webSearch && !ready.searchReady) throw new Error('Web search is not configured yet. Please try again later or turn off Web.');
       submitted = true;
-      const result = await streamChat({ message: user.content, history: messages.filter(m => !m.state).slice(-8).map(({ role, content }) => ({ role, content: content.slice(0, 6000) })) }, controller.signal, text => {
+      const result = await streamChat({ webSearch, message: user.content, history: messages.filter(m => !m.state).slice(-8).map(({ role, content }) => ({ role, content: content.slice(0, 6000) })) }, controller.signal, text => {
         partial += text;
         setMessages(current => current.map(m => m.id === assistantId ? { ...m, content: partial } : m));
-      });
+      }, setSearchPhase);
       setMessages(current => current.map(m => m.id === assistantId ? { id: assistantId, role: 'assistant', ...result } : m));
     } catch (e) {
       if (controller.signal.aborted && !submitted) {
@@ -80,7 +83,7 @@ export default function App() {
         setMessages(current => current.map(m => m.id === assistantId ? { ...m, state: 'failed' } : m));
         setError((e as Error).message);
       } else { setMessages(messages); setInput(question); setError((e as Error).message); }
-    } finally { requestRef.current = null; setConnecting(false); setBusy(false); textRef.current?.focus(); }
+    } finally { setSearchPhase(''); requestRef.current = null; setConnecting(false); setBusy(false); textRef.current?.focus(); }
   }
 
   function newChat() { if (busy) return; setMessages([]); setError(''); setInput(''); setSidebar(false); textRef.current?.focus(); }
@@ -106,9 +109,10 @@ export default function App() {
         </section> : <section className="conversation" aria-label="Conversation" aria-live="polite">
           {messages.map(message => <article key={message.id} className={`message ${message.role}`}>
             <div className="message-avatar">{message.role === 'assistant' ? 'm' : 'Y'}</div>
-            <div className="message-body"><div className="message-label">{message.role === 'assistant' ? 'Margin' : 'You'}{message.state === 'streaming' && <span className="stream-label">{message.content ? 'Writing…' : connecting ? 'Connecting…' : 'Thinking…'}</span>}</div>
+            <div className="message-body"><div className="message-label">{message.role === 'assistant' ? 'Margin' : 'You'}{message.state === 'streaming' && <span className="stream-label">{message.content ? 'Writing…' : connecting ? 'Connecting…' : searchPhase || 'Thinking…'}</span>}</div>
               {message.content ? <div className={`markdown ${message.state === 'streaming' ? 'streaming-text' : ''}`}><Suspense fallback={<p>{message.content}</p>}><Markdown>{message.content}</Markdown></Suspense></div> : message.state === 'streaming' && <div className="thinking-dots" role="status" aria-label="Preparing answer"><span /><span /><span /></div>}
-              {(message.state === 'stopped' || message.state === 'failed') && <div className="incomplete-note">{message.state === 'stopped' ? 'Stopped' : 'Interrupted'} · Partial answer</div>}
+              {!!message.sources?.length && <div className="web-sources" aria-label="Web sources"><small>Sources</small>{message.sources.map((source, index) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{index + 1}. {source.title}<span>{new URL(source.url).hostname}{source.publishedDate ? ` - ${source.publishedDate}` : ''}</span></a>)}</div>}
+              {(message.state === 'stopped'  || message.state === 'failed') && <div className="incomplete-note">{message.state === 'stopped' ? 'Stopped' : 'Interrupted'} · Partial answer</div>}
             </div>
           </article>)}
           <div ref={bottomRef} />
@@ -121,7 +125,7 @@ export default function App() {
         {status && !status.chatReady && <div className="setup-banner"><span><span className="setup-dot" /> Your workspace is ready. Connect the AI to start chatting.</span><button onClick={() => setSetup(true)}>Set up <ChevronRight size={14} /></button></div>}
         <form className="composer" onSubmit={send}>
           <textarea ref={textRef} value={input} onChange={e => setInput(e.target.value)} maxLength={4000} rows={2} placeholder="Ask a question. Explore an idea. Make it click." aria-label="Your question" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} disabled={busy} />
-          <div className="composer-toolbar"><div className="composer-context"><span className="context-label"><Sparkles size={14} /> Ask anything</span></div>{busy ? <button className="send-button stop-button" type="button" aria-label="Stop generating" title="Stop generating" onClick={() => requestRef.current?.abort()}><Square size={15} fill="currentColor" /></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!input.trim() || locked}><ArrowUp size={21} /></button>}</div>
+          <div className="composer-toolbar"><div className="composer-context"><span className="context-label"><Sparkles size={14} /> Ask anything</span><button type="button" className="web-toggle" aria-pressed={webSearch} onClick={() => setWebSearch(!webSearch)} disabled={busy} title="Search the web for current information"><Globe size={14} /> Web</button></div>{busy ? <button className="send-button stop-button" type="button" aria-label="Stop generating" title="Stop generating" onClick={() => requestRef.current?.abort()}><Square size={15} fill="currentColor" /></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!input.trim() || locked}><ArrowUp size={21} /></button>}</div>
         </form><p className="composer-disclaimer">AI can make mistakes. Check important details.</p>
       </div>
       {!messages.length && <div className="starter-area"><div className="prompt-grid">{prompts.map(({ icon: Icon, title, text }) => <button className="prompt-card" key={title} onClick={() => { setInput(text); textRef.current?.focus(); }}><Icon size={16} /><span>{title}</span></button>)}</div><div className="welcome-footnote"><BookOpen size={14} /> A little help for whatever comes next.</div></div>}
