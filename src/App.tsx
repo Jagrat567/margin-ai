@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Globe, ArrowUp, BookOpen, Check, ChevronRight, CircleHelp, Code2, Lightbulb, PenLine, Compass, Menu, MessageSquare, Moon, PanelLeftClose, Plus, Settings2, Sparkles, Square, Sun, X } from 'lucide-react';
 import type { AppStatus, ChatMessage } from '../shared/types';
+import PwaControls from './PwaControls';
 import { streamChat } from './api';
 import { waitForBackend } from './connection';
 import { applyTheme, initialTheme } from './theme';
@@ -20,6 +21,7 @@ export default function App() {
     applyTheme(next, true); setTheme(next);
   }
   const [status, setStatus] = useState<AppStatus | null>(null);
+  const [online, setOnline] = useState(navigator.onLine);
   const [connecting, setConnecting] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -38,6 +40,7 @@ export default function App() {
   const followScroll = useRef(true);
 
   async function refresh() {
+    if (!navigator.onLine) { setConnecting(false); return; }
     connectionRef.current?.abort();
     const controller = new AbortController(); connectionRef.current = controller;
     setConnecting(true); setError('');
@@ -45,14 +48,20 @@ export default function App() {
     catch (e) { if (!controller.signal.aborted) { setStatus(null); setError((e as Error).message); } }
     finally { if (connectionRef.current === controller) { connectionRef.current = null; setConnecting(false); } }
   }
-  useEffect(() => { void refresh(); return () => connectionRef.current?.abort(); }, []);
+  useEffect(() => {
+    const onOnline = () => { setOnline(true); void refresh(); };
+    const onOffline = () => { setOnline(false); connectionRef.current?.abort(); setConnecting(false); };
+    window.addEventListener('online', onOnline); window.addEventListener('offline', onOffline);
+    void refresh();
+    return () => { connectionRef.current?.abort(); window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
+  }, []);
   useEffect(() => { if (followScroll.current) bottomRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' }); }, [messages, busy]);
   useEffect(() => () => requestRef.current?.abort(), []);
   useEffect(() => { if (setup) setupRef.current?.showModal(); else setupRef.current?.close(); }, [setup]);
 
   async function send(event?: FormEvent, question = input) {
     event?.preventDefault();
-    if (!question.trim() || requestRef.current || busy) return;
+    if (!question.trim() || requestRef.current || busy || !navigator.onLine) return;
 
     const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: question.trim() };
     const next = [...messages, user];
@@ -101,7 +110,7 @@ export default function App() {
     </aside>
 
     <main className={`main-panel ${!messages.length ? 'empty-chat' : ''}`}>
-      <header className="topbar"><div className="topbar-title"><button className="mobile-menu icon-button" aria-label="Open sidebar" onClick={() => setSidebar(true)}><Menu size={21} /></button><span>Your AI companion</span></div><div className="topbar-actions"><button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button></div></header>
+      <header className="topbar"><div className="topbar-title"><button className="mobile-menu icon-button" aria-label="Open sidebar" onClick={() => setSidebar(true)}><Menu size={21} /></button><span>Your AI companion</span></div><div className="topbar-actions"><PwaControls busy={busy} /><button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button></div></header>
       <div className="chat-area" onScroll={e => { const el = e.currentTarget; followScroll.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
         {!messages.length ? <section className="welcome">
           <h1>margin<span>.</span></h1>
@@ -119,13 +128,14 @@ export default function App() {
         </section>}
       </div>
       <div className="composer-area">
-        {connecting && <div className="setup-banner" role="status">{busy ? 'Waking up Margin… Your message will send automatically when connected.' : 'Connecting to Margin… This can take about a minute after inactivity. You can type your question now.'}</div>}
-        {!connecting && !status && <div className="setup-banner"><span>Connection unavailable.</span><button onClick={() => void refresh()} disabled={busy}>Reconnect</button></div>}
+        {!online && <div className="setup-banner" role="status">You are offline. You can draft a question; reconnect to get AI answers or search the web.</div>}
+        {online && connecting && <div className="setup-banner" role="status">{busy ? 'Waking up Margin… Your message will send automatically when connected.' : 'Connecting to Margin… This can take about a minute after inactivity. You can type your question now.'}</div>}
+        {online && !connecting && !status && <div className="setup-banner"><span>Connection unavailable.</span><button onClick={() => void refresh()} disabled={busy}>Reconnect</button></div>}
         {error && <div className="error-banner" role="alert"><CircleHelp size={17} /><span>{error}</span><button className="icon-button" aria-label="Dismiss error" onClick={() => setError('')}><X size={16} /></button></div>}
         {status && !status.chatReady && <div className="setup-banner"><span><span className="setup-dot" /> Your workspace is ready. Connect the AI to start chatting.</span><button onClick={() => setSetup(true)}>Set up <ChevronRight size={14} /></button></div>}
         <form className="composer" onSubmit={send}>
           <textarea ref={textRef} value={input} onChange={e => setInput(e.target.value)} maxLength={4000} rows={2} placeholder="Ask a question. Explore an idea. Make it click." aria-label="Your question" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} disabled={busy} />
-          <div className="composer-toolbar"><div className="composer-context"><span className="context-label"><Sparkles size={14} /> Ask anything</span><button type="button" className="web-toggle" aria-pressed={webSearch} onClick={() => setWebSearch(!webSearch)} disabled={busy} title="Search the web for current information"><Globe size={14} /> Web</button></div>{busy ? <button className="send-button stop-button" type="button" aria-label="Stop generating" title="Stop generating" onClick={() => requestRef.current?.abort()}><Square size={15} fill="currentColor" /></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!input.trim() || locked}><ArrowUp size={21} /></button>}</div>
+          <div className="composer-toolbar"><div className="composer-context"><span className="context-label"><Sparkles size={14} /> Ask anything</span><button type="button" className="web-toggle" aria-pressed={webSearch} onClick={() => setWebSearch(!webSearch)} disabled={busy} title="Search the web for current information"><Globe size={14} /> Web</button></div>{busy ? <button className="send-button stop-button" type="button" aria-label="Stop generating" title="Stop generating" onClick={() => requestRef.current?.abort()}><Square size={15} fill="currentColor" /></button> : <button className="send-button" type="submit" aria-label="Send question" disabled={!input.trim() || locked || !online}><ArrowUp size={21} /></button>}</div>
         </form><p className="composer-disclaimer">AI can make mistakes. Check important details.</p>
       </div>
       {!messages.length && <div className="starter-area"><div className="prompt-grid">{prompts.map(({ icon: Icon, title, text }) => <button className="prompt-card" key={title} onClick={() => { setInput(text); textRef.current?.focus(); }}><Icon size={16} /><span>{title}</span></button>)}</div><div className="welcome-footnote"><BookOpen size={14} /> A little help for whatever comes next.</div></div>}

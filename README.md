@@ -43,3 +43,7 @@ Removing the integration does not delete existing files, database rows, or vecto
 ## Web search
 
 Add `TAVILY_API_KEY` to the Render backend environment (or local `.env`) and redeploy. Never use a `VITE_` prefix for this secret. Turn on **Web** in the composer for current information and source links. Each enabled question makes one basic Tavily search, shared across visitors. Ordinary chat does not use Tavily. Explicit today/latest news queries use a one-day window. Dates are interpreted relative to UTC; source dates can reflect updates. Search failures are shown explicitly.
+
+## Installable app and offline use
+
+Margin is a PWA. Open the HTTPS site and choose **Install**, or use the browser menu. On iOS use Safari > Share > Add to Home Screen. After the first online visit and service-worker installation, the app shell and bundled assets open offline. New AI answers and web searches require internet; API responses and secrets are never cached. Conversation history is still in memory and clears on reload. Offline drafts remain editable while the app is open and are not sent automatically. Updates prompt before reloading and cannot be applied during generation. Test the production build; service workers are disabled in Vite development mode.
