@@ -13,7 +13,21 @@ export async function streamChat(payload: unknown, signal: AbortSignal, onDelta:
   if (!response.body) throw new Error('Streaming is unavailable. Please try again.');
   for await (const frame of readSSE(response.body)) {
     const event = JSON.parse(frame) as ChatEvent;
-    if (event.type === 'delta') onDelta(event.text);
+    if (event.type === 'delta') {
+      // Pace the display independently of Groq's fast token delivery.
+      // Code points keep emoji/surrogate pairs together; completion waits for display.
+      const characters = Array.from(event.text);
+      for (let i = 0; i < characters.length; i += 3) {
+        signal.throwIfAborted();
+        onDelta(characters.slice(i, i + 3).join(''));
+        await new Promise<void>((resolve, reject) => {
+          const stop = () => { clearTimeout(timer); reject(signal.reason); };
+          const timer = setTimeout(() => { signal.removeEventListener('abort', stop); resolve(); }, 45);
+          signal.addEventListener('abort', stop, { once: true });
+          if (signal.aborted) stop();
+        });
+      }
+    }
     else if (event.type === 'error') throw new Error(event.message);
     else if (event.type === 'done') return event.result;
   }
